@@ -1,14 +1,21 @@
 import axios from 'axios';
 
-// Use localhost for development
-const API_BASE_URL = 'http://ec2-44-200-95-176.compute-1.amazonaws.com:8080/api';
+// Detect environment
+const isDevelopment = import.meta.env.DEV;
+const DIRECT_BACKEND_URL = 'http://ec2-44-200-95-176.compute-1.amazonaws.com:8080/api';
+
+// Use direct URL in dev, proxy in production
+const API_BASE_URL = isDevelopment ? DIRECT_BACKEND_URL : '/api';
+
+console.log('🔧 Environment:', isDevelopment ? 'DEVELOPMENT' : 'PRODUCTION');
+console.log('📡 API Base URL:', API_BASE_URL);
 
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 10000,
+  timeout: 30000,
 });
 
 // Request interceptor
@@ -38,13 +45,14 @@ api.interceptors.response.use(
     });
     
     if (error.code === 'ECONNREFUSED') {
-      console.error('Connection refused - is your Spring Boot server running on localhost:8080?');
+      console.error('Connection refused - is your backend server running?');
     }
     
     return Promise.reject(error);
   }
 );
 
+// Driver Service
 export const driverService = {
   getAllDrivers: () => api.get('/drivers'),
   getDriverById: (id) => api.get(`/drivers/${id}`),
@@ -61,6 +69,7 @@ export const driverService = {
     return api.get(`/drivers/validate/phone?${params}`);
   }
 };
+
 // Vehicle Service
 export const vehicleService = {
   getAllVehicles: () => api.get('/vehicles'),
@@ -69,20 +78,20 @@ export const vehicleService = {
   deleteVehicle: (id) => api.delete(`/vehicles/${id}`)
 };
 
-// Fare Rate Service (RTO manages)
+// Fare Rate Service
 export const fareRateService = {
   getCurrentRate: () => api.get('/fare/get'),
   updateRate: (newRate) => api.post(`/fare/change?newRate=${newRate}`)
 };
 
-// Ride Fare Data Service (from autometers)
+// Ride Fare Data Service
 export const rideFareService = {
   getRecentRides: () => api.get('/fares/autometer/recent'),
   getRidesByDriver: (driverId) => api.get(`/fares/autometer/driver/${driverId}`),
   submitRideData: (rideData) => api.post('/fares/autometer', rideData)
 };
 
-// SOS Service (WebSocket version)
+// SOS Service
 export const sosService = {
   sendSosAlert: (alertData) => api.post('/sos/alert', alertData),
   getAllAlerts: () => api.get('/sos/alerts'),
